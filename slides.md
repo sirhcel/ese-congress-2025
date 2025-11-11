@@ -1,637 +1,1326 @@
 ---
 # try also 'default' to start simple
-theme: seriph
+theme: default
 # random image from a curated Unsplash collection by Anthony
 # like them? see https://unsplash.com/collections/94734566/slidev
-background: https://cover.sli.dev
+# background: https://cover.sli.dev
 # some information about your slides (markdown enabled)
-title: Welcome to Slidev
+title: Oxidieren Schritt für Schritt - Refactoring und Erweiterung bestehender Embedded-Anwendungen mit Rust
 info: |
   ## Slidev Starter Template
   Presentation slides for developers.
 
   Learn more at [Sli.dev](https://sli.dev)
 # apply UnoCSS classes to the current slide
-class: text-center
+# class: text-center
 # https://sli.dev/features/drawing
 drawings:
   persist: false
 # slide transition: https://sli.dev/guide/animations.html#slide-transitions
-transition: slide-left
+transition: fade-out
 # enable MDC Syntax: https://sli.dev/features/mdc
 mdc: true
 # duration of the presentation
 duration: 35min
+
+selectable: true
+fonts:
+    mono: JetBrains Mono
 ---
 
-# Welcome to Slidev
+Embedded Software Engineering Kongress 2025
 
-Presentation slides for developers
+# Oxidieren Schritt für Schritt
 
-<div @click="$slidev.nav.next" class="mt-12 py-1" hover:bg="white op-10">
-  Press Space for next page <carbon:arrow-right />
-</div>
+## Refactoring und Erweiterung bestehender Embedded-Anwendungen mit Rust
 
-<div class="abs-br m-6 text-xl">
-  <button @click="$slidev.nav.openInEditor()" title="Open in Editor" class="slidev-icon-btn">
-    <carbon:edit />
-  </button>
-  <a href="https://github.com/slidevjs/slidev" target="_blank" class="slidev-icon-btn">
-    <carbon:logo-github />
-  </a>
-</div>
+Christian Meusel
 
 <!--
-The last comment block of each slide will be treated as slide notes. It will be visible and editable in Presenter Mode along with the slide. [Read more in the docs](https://sli.dev/guide/syntax.html#notes)
+The last comment block of each slide will be treated as slide notes. It will be
+visible and editable in Presenter Mode along with the slide. [Read more in the
+docs](https://sli.dev/guide/syntax.html#notes)
 -->
 
 ---
-transition: fade-out
----
 
-# What is Slidev?
+# Meine ersten Rust-Bindings
 
-Slidev is a slides maker and presenter designed for developers, consist of the following features
+* MQTT-Klient des ESP-IDF von Espressif
+* Konfiguration und Start
+    ```c
+    esp_mqtt_client_handle_t esp_mqtt_client_init(const esp_mqtt_client_config_t *config);
+    esp_err_t esp_mqtt_client_start(esp_mqtt_client_handle_t client);
+    ```
+* Datenstruktur zur Konfiguration
+    ```c
+    typedef struct psk_key_hint {
+        const uint8_t* key;                     /*!< key in PSK authentication mode in binary format */
+        size_t   key_size;                      /*!< length of the key */
+        const char* hint;                       /*!< hint in PSK authentication mode in string format */
+    } psk_hint_key_t;
 
-- 📝 **Text-based** - focus on the content with Markdown, and then style them later
-- 🎨 **Themable** - themes can be shared and re-used as npm packages
-- 🧑‍💻 **Developer Friendly** - code highlighting, live coding with autocompletion
-- 🤹 **Interactive** - embed Vue components to enhance your expressions
-- 🎥 **Recording** - built-in recording and camera view
-- 📤 **Portable** - export to PDF, PPTX, PNGs, or even a hostable SPA
-- 🛠 **Hackable** - virtually anything that's possible on a webpage is possible in Slidev
-<br>
-<br>
-
-Read more about [Why Slidev?](https://sli.dev/guide/why)
-
+    typedef struct {
+        const char *uri;
+        mqtt_event_callback_t event_handle;
+        // ...
+        // The actual PSK data: key, length, hint.
+        const struct psk_key_hint *psk_hint_key;
+    }  esp_mqtt_client_config_t;
+    ```
 <!--
-You can have `style` tag in markdown to override the style for the current page.
-Learn more: https://sli.dev/features/slide-scope-style
+* Mikrocontroller
+    * Xtensa
+    * RISC-V
+* FreeRTOS
 -->
 
-<style>
-h1 {
-  background-color: #2B90B6;
-  background-image: linear-gradient(45deg, #4EC5D4 10%, #146b8c 20%);
-  background-size: 100%;
-  -webkit-background-clip: text;
-  -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
+---
+
+# Meine ersten Rust-Bindings: Rust-Abstraktion
+
+* Rust-Abstraktion für MQTT-Klient
+    ```rust
+    let psk = PskConfiguration {
+        key: &[0xde, 0xad, /* ... */ ];
+        hint: "rust-esp32-std-demo",
+    };
+
+    let conf = MqttClientConfiguration {
+        client_id: Some("rust-esp32-std-demo"),
+        psk: Some(psk),
+        ..Default::default()
+    };
+
+    let (mut client, mut connection) = EspMqttClient::new_with_conn("mqtts://broker.emqx.io:8883", &conf)?;
+    ```
+* Wenn es übersetzt, dann funktioniert es
+* Das tat es auch
+
+---
+
+# Meine ersten Rust-Bindings: Zwei Wochen später
+
+* Anwendung weiter in Entwicklung
+* Sporadisch begannen Fehler aufzutauchen
+    ```
+    I (14339) rust_esp32_std_demo: MQTT Message: BeforeConnect
+    E (14369) esp-tls-mbedtls: mbedtls_ssl_conf_psk returned -0x7100
+    E (14369) esp-tls-mbedtls: Failed to set client configurations, returned [0x801B] (ESP_ERR_MBEDTLS_SSL_CONF_PSK_FAILED)
+    E (14369) esp-tls: create_ssl_handle failed
+    E (14379) esp-tls: Failed to open new connection
+    E (14389) TRANSPORT_BASE: Failed to open a new connection
+    E (14389) MQTT_CLIENT: Error transport connect
+    I (14399) rust_esp32_std_demo: MQTT Message ERROR: ESP_FAIL
+    I (14399) rust_esp32_std_demo: MQTT Message: Disconnected
+    E (14409) MQTT_CLIENT: Client has not connected
+    ```
+* In Teilen, die ich seitdem nicht mehr angefasst hatte
+* Auf zum Debugging ...
+
+---
+
+# Meine ersten Rust-Bindings: Was war geschehen?
+
+* MQTT-Klient wird in einem separaten Thread ausgeführt
+* Konfigurationsdaten werden kopiert
+* Für referenzierte Daten in `psk_hint_key` jedoch nur der Zeiger
+* Use-After-Free
+    * Daten werden an Klienten übergeben
+    * Klient wird gestartet
+    * Stack-Frame mit Konfigurationsdaten wird abgebaut
+    * Klient verarbeitet Konfiguration
+* Undefiniertes Verhalten muss nicht unmittelbar Effekte zeigen
+
+<!--
+* Durch Tests schwer zu provozieren
+    * Stack-Layout
+    * Code im Thread der Initialisierung
+    * Zeitfenster bis zur Verarbeitung der Konfiguration
+-->
+
+---
+
+# Meine ersten Rust-Bindings: Wieso?
+
+* Warum habe ich das in erster Instanz versucht?
+    * Dokumentation der Funktionen wies nicht darauf hin
+    * Kein Hinweis in den Datenstrukturen zur Konfiguration
+* Code-Lesen bis in den MQTT-Klient hätte das offenbart
+* Konfigurationsdaten waren im C-Beispielcode als `static` deklariert
+* Riesiger-Kontext zum Schlussfolgern
+
+<!--
+* Über Ursachen kann ich nur spekulieren
+    * Dokumentation Vergessen
+    * Unterschiedliche Perspektive auf "offensichtlich"
+* ESP-IDF ist OpenSource
+    * Reichlich 16.000 Sterne bei GitHub
+    * Reichlich 48.000 Commits
+    * Knapp 1.000 Leute haben dazu beigetraten
+    * Trotz großer Reichweite nicht aufgefallen
+* Dokumentation enthält mittlerweile zumindest einen Hinweis
+-->
+
+---
+
+# Über mich
+
+* Christian Meusel
+* Freiberufler: Eingebettete Systeme vom Scheitel bis zur Sohle
+* Rust seit 2020
+* Maintainer von serialport-rs und ein paar kleinen Embedded-Crates
+* Mitglied der Rust-Embedded-Working-Group
+* Arbeite am Neustart einer [Dresdner Rust-Community](https://github.com/rust-dresden) mit
+* Kontakt
+    * christian@christian-meusel.de
+    * https://github.com/sirhcel
+
+<!--
+* Java in Eingebettenen Systemen
+    * Arbeitshypothesen
+    * Speichersicherheit
+    * Onboarding
+    * Lebendiges Ökosystem
+* Rust heute
+    * Gleiche Arbeitshypothesen
+    * Echte Systemsprache
+    * Lässt sich auch auf Mikrocontrollern einetzen
+-->
+
+---
+layout: image-left
+image: rust-evangelism-strike-force-half-slide.jpg
+backgroundSize: contain
+---
+
+# Cloudflare Rewrote Their Core in Rust, Then Half of the Internet Went Down
+
+```rust
+pub fn fetch_features(
+    &mut self,
+    input: &dyn BotsInput,
+    features: &mut Features,
+) -> Result<(), (ErrorFlags, i32)> {
+    features.checksum &= 0xFFFF_FFFF_0000_0000;
+    features.checksum |= u64::from(self.config.checksum);
+    let (feature_values, _) = features
+        .append_with_names(&self.config.feature_names)
+        .unwrap();
+    // ...
 }
-</style>
-
-<!--
-Here is another comment.
--->
-
----
-transition: slide-up
-level: 2
----
-
-# Navigation
-
-Hover on the bottom-left corner to see the navigation's controls panel, [learn more](https://sli.dev/guide/ui#navigation-bar)
-
-## Keyboard Shortcuts
-
-|                                                     |                             |
-| --------------------------------------------------- | --------------------------- |
-| <kbd>right</kbd> / <kbd>space</kbd>                 | next animation or slide     |
-| <kbd>left</kbd>  / <kbd>shift</kbd><kbd>space</kbd> | previous animation or slide |
-| <kbd>up</kbd>                                       | previous slide              |
-| <kbd>down</kbd>                                     | next slide                  |
-
-<!-- https://sli.dev/guide/animations.html#click-animation -->
-<img
-  v-click
-  class="absolute -bottom-9 -left-7 w-80 opacity-50"
-  src="https://sli.dev/assets/arrow-bottom-left.svg"
-  alt=""
-/>
-<p v-after class="absolute bottom-23 left-45 opacity-30 transform -rotate-10">Here!</p>
-
----
-layout: two-cols
-layoutClass: gap-16
----
-
-# Table of contents
-
-You can use the `Toc` component to generate a table of contents for your slides:
-
-```html
-<Toc minDepth="1" maxDepth="1" />
 ```
 
-The title will be inferred from your slide content, or you can override it with `title` and `level` in your frontmatter.
-
-::right::
-
-<Toc text-sm minDepth="1" maxDepth="2" />
+<!--
+* Über Rust ;-)
+* Guter Gründe abseits des Hypes
+    * Ausdrucksstarke Sprache
+    * Lokalität beim Schlussfolgern über Code
+    * Sichere Defaults
+    * Korrektheit bei Integration
+    * Hilfreiche Fehlermeldungen
+    * Allgemein akzeptierter Stil
+* Ich möchte Sie einladen, Sich eine eigene Meinung zu bilden
+-->
 
 ---
 layout: image-right
-image: https://cover.sli.dev
+image: bsm-ws36a-ed.png
+background-size: contain
 ---
 
-# Code
+# Anwendungsbeispiel
 
-Use code snippets and get the highlighting directly, and even types hover!
+* Energiezähler der Firma Bauer
+* Erweiterug einer bestehenden Bare-Metal-Firmware in C
+    * Verarbeitung neuer Eingabedaten
+    * Dynamisches Erzeugen von 2D-Codes für ein Zusatzdisplay
+    * Authentifizierte Kommunikation zwischen Zähler und Zusatzdisplay
+* Projekt ist im Feldtest
+* Zertifizierung läuft
 
-```ts [filename-example.ts] {all|4|6|6-7|9|all} twoslash
-// TwoSlash enables TypeScript hover information
-// and errors in markdown code blocks
-// More at https://shiki.style/packages/twoslash
-import { computed, ref } from 'vue'
+---
 
-const count = ref(0)
-const doubled = computed(() => count.value * 2)
+# Warum Erweitern oder Modernisieren?
 
-doubled.value = 2
+<v-clicks depth="2">
+
+* Erfahrung mit bekannter Codebasis sammeln
+* Nicht alles auf einmal lösen müssen
+* Bestehenden, bewährten Code behalten
+    * Neue Fehler stammen überwiegend aus neuem Code
+    * Zertifizierung für bestehenden Code erhalten
+* Externe Komponenten weiter nutzen
+    * Adapter für Krypto-Beschleuniger
+    * ...
+* "Schwache Flanken" verbessern
+
+</v-clicks>
+
+<!--
+* Auch für Zertifizierer ist Rust oft Neuland
+-->
+
+---
+layout: section
+---
+
+# Grundrezept
+
+---
+
+# Überblick
+
+<div class="absolute bottom-5 left-0 right-0 p-2">
+    <p align="center">
+    <img width="800" src="/integration-overview.svg" />
+    </p>
+</div>
+
+---
+
+# Grundlage: C-ABI
+
+<v-clicks depth="2">
+
+* Application Binary Interface der Sprache C
+    * Konventionen für Funktionsaufrufe
+    * Speicherlayout
+    * Praktisch für alle Targets verfügbar
+* Aufgabe der Integration damit liegt bei Rust
+* Rusts Foreign-Function-Interface
+    * Erzeugt kompatiblen Code für Aufrufe aus und Einsprungpunkte in Rust
+    * Erzeugt kompatible Speicherdarstellungen
+    * Einschränkung bei nutzbaren Sprachmerkmalen
+
+</v-clicks>
+
+<!--
+* Speicherlayout
+    * Ausrichtung
+    * Größe
+    * Darstellung von Daten
+    * Intern und extern
+-->
+
+---
+
+# Rust-FFI: Aufruf von Rust aus C
+
+````md magic-move
+```c
+int add(const int left, const int right) {
+    return left + right
+}
+```
+```rust
+use core::ffi::c_int;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn add(left: c_int, right: c_int) -> c_int {
+    left + right
+}
+```
+````
+<v-clicks>
+
+* Modul `core::ffi` stellt plattformspezifische C-Datentypen bereit
+* `#[unsafe(no_mangle)]` deaktiviert Name-Mangling des Rust-Compilers
+* `extern "C"` erzeugt zum C-ABI kompatiblen Prolog und Epilog
+
+</v-clicks>
+
+<!--
+* Name Mangling
+    * Rust-Compiler erzeugt global eindeutiges Symbol
+    * Bei C ist der Nutzer dafür verantwortlich
+    * Freude bei Integration von Code
+-->
+
+---
+
+# Rust-FFI: Aufruf von C aus Rust
+
+````md magic-move
+```c
+int square(int value);
+```
+```rust
+use core::ffi::c_int;
+
+extern "C" {
+    pub fn square(value: c_int) -> c_int;
+}
+```
+```rust
+use core::ffi::c_int;
+
+extern "C" {
+    pub fn square(value: c_int) -> c_int;
+}
+
+fn main() {
+    let squared = unsafe { square(42) };
+}
+```
+````
+
+<v-clicks depth="2">
+
+* Deklaration des Funktionsprototypen als `extern "C"`
+* Compiler erzeugt zum C-ABI kompatiblen Code für einen Aufruf
+* Aufruf muss über `unsafe` erfolgen
+    * Rust-Compiler kann `square` nicht prüfen
+    * Nutzer muss prüfen, dass `square` kein undefiniertes Verhalten enthält
+    * Mit `unsafe` erkläkt der Nutzer dies gegenüber dem Rust-Compiler
+    * Zustimmung ist explizit und leicht auffindbar
+
+</v-clicks>
+
+---
+
+# Rust-FFI: Datentypen
+
+````md magic-move
+```c
+#include <stdint.h>
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+} Point;
+```
+```rust
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[repr(C)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+```
+````
+<v-clicks depth="2">
+
+* `#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]` erzeugt automatische
+  Implementierungen für Rust-Standard-Traits
+    * Duplizieren von Werten
+    * Vergleich von Werten mittels `==`
+    * Darstellung für Debug-Ausgaben `Point { x: 1, y: 2 }`
+    * Schlüssel für Hash-Map
+* `#[repr(C)]` erzeugt zum C-ABI kompatibles Layout
+
+</v-clicks>
+
+---
+
+# Panic-Handler
+
+<v-clicks>
+
+* Zwei Mechanismen zur Signalisierung von Fehlern
+    * Im Datenfluss: `Result<T, E>`
+    * Außerhalb von Kontroll- und Datenfluss: Panik
+* Panik
+    * Unmittelbarer Abbruch der Anwendung
+    * Aufruf einer Handlerfunktion
+* Beispiel: Prozessorausnahme zum Übergang zu bestehender Behandlung in C
+    ```rust
+    use core::panic::PanicInfo;
+
+    #[panic_handler]
+    fn panic(_: &PanicInfo) -> ! {
+        cortex_m::asm::udf();
+    }
+    ```
+
+</v-clicks>
+
+<!--
+* Später mehr zum Result
+* `std`
+    * Stack-Unwindung
+    * Debug-Ausgabe
+    * Mit Hilfe von Betriebssystemfunktionen
+    * Stellt generischen Handler bereit
+    * Handler nutzt Betriebssystem
+* `no_std`
+    * `no_std`-Umgebung: vielfältig
+    * eigenen Handler bereitstellen
+    * Keine Standardausgabe
+    * Manöver des letzten Augenblicks durchführen (Fehlerzähler, ...)
+    * Blockieren oder Reset
+* Beispiel
+    * Undefined Instruktion
+    * Hard-Fault
+    * Never-Type `!`: Funktion, die nicht zurückkehrt
+-->
+
+---
+
+# Integration: Als Bibliothek
+
+<v-clicks depth="2">
+
+* C- und Rust-Code werden separat übersetzt
+* Gesamten Rust-Code zu einer Bibliothek übersetzen
+    * Rust-Runtime-Code würde sonst Namenskonflikte erzeugen
+    * Gegebenenfalls dedizierte Crate dafür erstellen
+    * Übersetzung als Bibliothek über `Cargo.toml` festlegen
+        ```toml
+        [lib]
+        crate-type = ["staticlib"]
+        ```
+* Wie jede andere C-Bibliothek mit C-Compiler zur Anwendung linken
+    ```sh
+    $ gcc -o firmware.elf librusty.a ...
+    ```
+* Geschafft! &#x1f389;
+
+
+</v-clicks>
+
+<!--
+* Für Mikrocontroller statische Bibliothek
+* Lässt sich auch als Binärartefakt integrieren
+    * Zum Beispiel bei IDEs
+    * Zum Beispiel C-Developer-Tools
+-->
+
+---
+
+# Zwischenbilanz
+
+<v-clicks>
+
+* Grunlage: C-ABI
+* Kompatible Rust-Funktionprototypen
+    ```rust
+    unsafe extern "C" { square(value: c_int) -> c_int; }
+    ```
+* Aufrufkompatible Rust-Funktionen
+    ```rust
+    #[unsafe(no_mangle)]
+    extern "C" fn add(left: c_int, right: c_int) -> c_int
+    ```
+* Passende C-Funktionsprototypen
+    ```c
+    int add(const int left, const int right) -> int;
+    ```
+* Kompatible Datentypen
+    ```rust
+    #[repr(C)]
+    pub struct Point { x: i32, y: i32 }
+    ```
+* Allen Rust-Code zu einer (statischen) Funktion übersetzen
+* C- und Rust-Code zu einer Anwendung linken &#x1f389;
+
+</v-clicks>
+
+<!--
+* Es gibt Potential für mehr Komfort
+-->
+
+---
+layout: section
+---
+
+# Gewürze
+
+---
+
+# FFI-Bindings: Automatisches Erzeugen
+
+<v-clicks depth="2">
+
+* Manuelles Erzeugen ist fehleranfällig
+    * Anpassung bei Änderungen
+    * Komplexität der Schnittstelle
+* Werkzeuge zum automatischen Erzeugen nutzen
+    * `bindgen` erzeugt Rust-Bindungs für C/C++&#x200b;-Code
+    * `cbindgen` erzeugt C/C++&#x200b;-Bindings für Rust-Code
+    * Generierung in Build-Prozess integrieren
+* Beispiele weiterer Werkzeuge
+    * `cxx` für idiomatischere C++&#x200b;-Schnittstellen
+    * `cxx-qt` für spezialisierte Integration mit Qt
+    * ...
+    * Vortrag von Kris van Rens: _Adopting Rust Means Talking to Rust – but
+      how?_, heute 16:35 in diesem Saal
+
+</v-clicks>
+
+<!--
+* Beispiel Komplexität: mbedTLS
+* Werkzeuge haben Grenzen
+    * Kritische Konstrukte müssen gegebenenfalls manuell übersetzen werden
+-->
+
+---
+
+# bindgen
+
+<v-clicks depth="2">
+
+* Erzeugt Rust-Bindings für C/C++&#x200b;-Code
+    * Aus Header-Datei
+    * Für ein bestimmtes Build-Target
+    * Gegebenenfalls mit Plattformdefinitionen des Targets (Sysroot)
+    * Viele Parameter zum Steuern des Generierungsprozesses
+* Nutzt LLVM für Analyse
+* Generierung
+    * Statisch und generierte Bindings dem Projekt hinzufügen
+    * Dynamisch im Übersetzungsvorgang
+
+</v-clicks>
+
+<!--
+* Sysroot:
+    * Artefakte des Zielsystems
+    * Zum Beispiel `stdio.h`
+    * Stammt vom Compiler für Zielsystem oder Zielsystem selbst
+* Statisch
+    * Keine Integration in Build erforderlich
+    * Bindings werden nicht automatisch aktuell gehalten
+    * Gut genug für einen ersten Test
+* Dynamisch
+    * Integration in Build notwendig
+    * Bindings automatisch aktuell
+-->
+
+---
+
+# bindgen: Nutzung als Befehl
+
+* Befehl als Wrapper um Bibliohek
+* Für statische Generierung
+* Für Integration in Nicht-Rust-Builds
+* Beispiel
+    ```sh
+    $ bindgen --use-core \
+        --newtype-enum mbedtls_md_type_t \
+        bindgen/mbedtls_imports.h \
+        -- \
+        -target thumbv8m.main-none-eabihf \
+        --sysroot /opt/arm-gnu-toolchain-13.2.rel1-darwin-arm64-arm-none-eabi/arm-none-eabi \
+        -I mbedtls/include \
+        > src/mbedtls.rs
+    ```
+* Argumente
+    * Vor `--` für bindgen selbst
+    * Nach `--` für LLVM
+
+---
+
+# bindgen: Nutzung als Bibliothek
+
+* Direkte Nutzung der Bibliothek in Cargo-Build-Skript `build.rs`
+* Für dynamische Generierung
+* Beispiel
+    ```rust
+    fn main() {
+        let mbedtls_dir = std::env::var("MBEDTLS_DIR").expect("MBEDTLS_DIR missing");
+        let sysroot_der = std::env::var("SYSROOT_DIR").expect("SYSROOT_DIR missing");
+
+        bindgen::Builder::default()
+            .use_core()
+            .newtype_enum("mbedtls_md_type_t")
+            .header("bindgen/mbedtls_imports.h")
+            .clang_args(["--sysroot", &sysroot_dir])
+            .clang_args(["-I", &mbedtls_dir])
+            .generate()
+            .expect("unable to generate bindings")
+            .write_to_file("src/mbedtls.rs")
+            .expect("unable to write mbedlts.rs");
+
+    }
+    ```
+
+<!--
+* TODO: Visualize with magic move?
+-->
+
+---
+
+# bindgen: Header bündeln
+
+* Bindgen nimmt eine einzelne Header-Datei entgegen
+* Sollen FFI-Bindings für mehrere Header generiert werden - Wrapper erstellen
+* Beispiel
+    ```c
+    #ifndef MBEDTLS_IMPORTS_H
+    #define MBEDTLS_IMPORTS_H
+
+    #include "mbedtls/ecdsa.h"
+    #include "mbedtls/ecp.h"
+    #include "mbedtls/entropy.h"
+    #include "mbedtls/md.h"
+
+    #endif
+    ```
+
+---
+layout: two-cols-header
+---
+
+# bindgen: Beispiel
+
+::left::
+
+C-Funktion
+
+```c {*}{class:'!children:text-[8px]/1'}
+/**
+ * \brief           This function computes [...]
+ */
+int mbedtls_ecdsa_write_signature(
+    mbedtls_ecdsa_context *ctx,
+    mbedtls_md_type_t md_alg,
+    const unsigned char *hash,
+    size_t hlen,
+    unsigned char *sig,
+    size_t sig_size,
+    size_t *slen,
+    int (*f_rng)(void *, unsigned char *, size_t),
+    void *p_rng
+);
 ```
 
-<arrow v-click="[4, 5]" x1="350" y1="310" x2="195" y2="342" color="#953" width="2" arrowSize="1" />
+::right::
 
-<!-- This allow you to embed external code blocks -->
-<<< @/snippets/external.ts#snippet
+Rust-FFI-Bindings
+```rust {*}{class:'!children:text-[8px]/1'}
+unsafe extern "C" {
+    #[doc = " \\brief           This function computes [...]"]
+    pub fn mbedtls_ecdsa_write_signature(
+        ctx: *mut mbedtls_ecdsa_context,
+        md_alg: mbedtls_md_type_t,
+        hash: *const ::core::ffi::c_uchar,
+        hlen: usize,
+        sig: *mut ::core::ffi::c_uchar,
+        sig_size: usize,
+        slen: *mut usize,
+        f_rng: ::core::option::Option<
+            unsafe extern "C" fn(
+                arg1: *mut ::core::ffi::c_void,
+                arg2: *mut ::core::ffi::c_uchar,
+                arg3: usize,
+            ) -> ::core::ffi::c_int,
+        >,
+        p_rng: *mut ::core::ffi::c_void,
+    ) -> ::core::ffi::c_int;
+}
+```
 
-<!-- Footer -->
-
-[Learn more](https://sli.dev/features/line-highlighting)
-
-<!-- Inline style -->
 <style>
-.footnotes-sep {
-  @apply mt-5 opacity-10;
-}
-.footnotes {
-  @apply text-sm opacity-75;
-}
-.footnote-backref {
-  display: none;
+.two-cols-header {
+  column-gap: 2em; /* Adjust the gap size as needed */
 }
 </style>
 
 <!--
-Notes can also sync with clicks
-
-[click] This will be highlighted after the first click
-
-[click] Highlighted with `count = ref(0)`
-
-[click:3] Last click (skip two clicks)
+* Beispiel enthält noch keine Typen, wie `mbedtls_ecdsa_context`
 -->
 
 ---
-level: 2
----
 
-# Shiki Magic Move
+# bindgen: Limitierungen
 
-Powered by [shiki-magic-move](https://shiki-magic-move.netlify.app/), Slidev supports animations across multiple code snippets.
+<v-clicks depth="2">
 
-Add multiple code blocks and wrap them with <code>````md magic-move</code> (four backticks) to enable the magic move. For example:
+* Übersetzt nicht alle Sprachkonstrukte
+    * Zum Beispiel werden Defines mit Typumwandlung noch nicht unterstützt
+        ```c
+        typedef uint8_t flag_type;
+        #define FLAG_TYPE_C(x) ((flag_type)(x))
 
-````md magic-move {lines: true}
-```ts {*|2|*}
-// step 1
-const author = reactive({
-  name: 'John Doe',
-  books: [
-    'Vue 2 - Advanced Guide',
-    'Vue 3 - Basic Guide',
-    'Vue 4 - The Mystery'
-  ]
-})
-```
+        #define SOME_FLAG       FLAG_TYPE_C(0x1)
+        #define ANOTHER_FLAG    FLAG_TYPE_C(0x2)
+        ```
+    * In solchen Fälle manuell erstellen und einbinden
+        ```rust
+        const SOME_FLAG: u8 = 0x1;
+        const ANOTHER_FLAG: u8 = 0x2;
+        ```
+* bindgen nutzt LLVM - nicht den C-Compiler für das Zielsystem
+    * Compiler kann zum Beispiel die Größe eines Enums frei wählen
+    * Durch zusätzliche Tests absichern
 
-```ts {*|1-2|3-4|3-4,8}
-// step 2
-export default {
-  data() {
-    return {
-      author: {
-        name: 'John Doe',
-        books: [
-          'Vue 2 - Advanced Guide',
-          'Vue 3 - Basic Guide',
-          'Vue 4 - The Mystery'
-        ]
-      }
-    }
-  }
-}
-```
-
-```ts
-// step 3
-export default {
-  data: () => ({
-    author: {
-      name: 'John Doe',
-      books: [
-        'Vue 2 - Advanced Guide',
-        'Vue 3 - Basic Guide',
-        'Vue 4 - The Mystery'
-      ]
-    }
-  })
-}
-```
-
-Non-code blocks are ignored.
-
-```vue
-<!-- step 4 -->
-<script setup>
-const author = {
-  name: 'John Doe',
-  books: [
-    'Vue 2 - Advanced Guide',
-    'Vue 3 - Basic Guide',
-    'Vue 4 - The Mystery'
-  ]
-}
-</script>
-```
-````
-
----
-
-# Components
-
-<div grid="~ cols-2 gap-4">
-<div>
-
-You can use Vue components directly inside your slides.
-
-We have provided a few built-in components like `<Tweet/>` and `<Youtube/>` that you can use directly. And adding your custom components is also super easy.
-
-```html
-<Counter :count="10" />
-```
-
-<!-- ./components/Counter.vue -->
-<Counter :count="10" m="t-4" />
-
-Check out [the guides](https://sli.dev/builtin/components.html) for more.
-
-</div>
-<div>
-
-```html
-<Tweet id="1390115482657726468" />
-```
-
-<Tweet id="1390115482657726468" scale="0.65" />
-
-</div>
-</div>
+</v-clicks>
 
 <!--
-Presenter note with **bold**, *italic*, and ~~striked~~ text.
-
-Also, HTML elements are valid:
-<div class="flex w-full">
-  <span style="flex-grow: 1;">Left content</span>
-  <span>Right content</span>
-</div>
+* Bei Problemen können einzelne Elemente von Generierung ausgenommen werden
+* Enums
+    * Dieses Jahr durch Debuggung gelernt
+    * Nach 25 Jahren C
+        > Each enumerated type shall be compatible with char, a signed integer
+        > type, or an unsigned integer type. The choice of type is
+        > implementation-defined, but shall be capable of representing the
+        > values of all the members of the enumeration.
 -->
 
 ---
-class: px-20
----
 
-# Themes
+# cbindgen
 
-Slidev comes with powerful theming support. Themes can provide styles, layouts, components, or even configurations for tools. Switching between themes by just **one edit** in your frontmatter:
+* Erzeugt C/C++&#x200b;-Bindings für Rust-Code
+* Einsatz analog zu bindgen
+    * Statische/dynamisch
+    * Befehl oder Bibliothek
+* Konfiguration über Datei und Annotation im Code
+    ```toml
+    language = "C"
+    cpp_compat = true
 
-<div grid="~ cols-2 gap-2" m="t-2">
+    autogen_warning = "// This file is autogenerated by cbindgen. Manual modifiation is futile."
+    include_guard = "POINT_H"
+    includes = ["some_dependency.h"]
 
-```yaml
----
-theme: default
----
-```
-
-```yaml
----
-theme: seriph
----
-```
-
-<img border="rounded" src="https://github.com/slidevjs/themes/blob/main/screenshots/theme-default/01.png?raw=true" alt="">
-
-<img border="rounded" src="https://github.com/slidevjs/themes/blob/main/screenshots/theme-seriph/01.png?raw=true" alt="">
-
-</div>
-
-Read more about [How to use a theme](https://sli.dev/guide/theme-addon#use-theme) and
-check out the [Awesome Themes Gallery](https://sli.dev/resources/theme-gallery).
+    [enum]
+    rename_variants = "QualifiedScreamingSnakeCase"
+    ```
+* Exportiert standardmäßig alle als `extern "C"` oder `#[repr(C)]`
+  gekennzeichneten Elemente
 
 ---
-
-# Clicks Animations
-
-You can add `v-click` to elements to add a click animation.
-
-<div v-click>
-
-This shows up when you click the slide:
-
-```html
-<div v-click>This shows up when you click the slide.</div>
-```
-
-</div>
-
-<br>
-
-<v-click>
-
-The <span v-mark.red="3"><code>v-mark</code> directive</span>
-also allows you to add
-<span v-mark.circle.orange="4">inline marks</span>
-, powered by [Rough Notation](https://roughnotation.com/):
-
-```html
-<span v-mark.underline.orange>inline markers</span>
-```
-
-</v-click>
-
-<div mt-20 v-click>
-
-[Learn more](https://sli.dev/guide/animations#click-animation)
-
-</div>
-
+layout: two-cols-header
 ---
 
-# Motions
+# cbindgen: Beispiel
 
-Motion animations are powered by [@vueuse/motion](https://motion.vueuse.org/), triggered by `v-motion` directive.
+::left::
 
-```html
-<div
-  v-motion
-  :initial="{ x: -80 }"
-  :enter="{ x: 0 }"
-  :click-3="{ x: 80 }"
-  :leave="{ x: 1000 }"
->
-  Slidev
-</div>
-```
+Rust-Funktion
 
-<div class="w-60 relative">
-  <div class="relative w-40 h-40">
-    <img
-      v-motion
-      :initial="{ x: 800, y: -100, scale: 1.5, rotate: -50 }"
-      :enter="final"
-      class="absolute inset-0"
-      src="https://sli.dev/logo-square.png"
-      alt=""
-    />
-    <img
-      v-motion
-      :initial="{ y: 500, x: -100, scale: 2 }"
-      :enter="final"
-      class="absolute inset-0"
-      src="https://sli.dev/logo-circle.png"
-      alt=""
-    />
-    <img
-      v-motion
-      :initial="{ x: 600, y: 400, scale: 2, rotate: 100 }"
-      :enter="final"
-      class="absolute inset-0"
-      src="https://sli.dev/logo-triangle.png"
-      alt=""
-    />
-  </div>
+```rust {*}{class:'!children:text-[8px]/1'}
+use core::str::FromStr;
+use core::ffi::{c_char, CStr};
 
-  <div
-    class="text-5xl absolute top-14 left-40 text-[#2B90B6] -z-1"
-    v-motion
-    :initial="{ x: -80, opacity: 0}"
-    :enter="{ x: 0, opacity: 1, transition: { delay: 2000, duration: 1000 } }">
-    Slidev
-  </div>
-</div>
-
-<!-- vue script setup scripts can be directly used in markdown, and will only affects current page -->
-<script setup lang="ts">
-const final = {
-  x: 0,
-  y: 0,
-  rotate: 0,
-  scale: 1,
-  transition: {
-    type: 'spring',
-    damping: 10,
-    stiffness: 20,
-    mass: 2
-  }
-}
-</script>
-
-<div
-  v-motion
-  :initial="{ x:35, y: 30, opacity: 0}"
-  :enter="{ y: 0, opacity: 1, transition: { delay: 3500 } }">
-
-[Learn more](https://sli.dev/guide/animations.html#motion)
-
-</div>
-
----
-
-# LaTeX
-
-LaTeX is supported out-of-box. Powered by [KaTeX](https://katex.org/).
-
-<div h-3 />
-
-Inline $\sqrt{3x-1}+(1+x)^2$
-
-Block
-$$ {1|3|all}
-\begin{aligned}
-\nabla \cdot \vec{E} &= \frac{\rho}{\varepsilon_0} \\
-\nabla \cdot \vec{B} &= 0 \\
-\nabla \times \vec{E} &= -\frac{\partial\vec{B}}{\partial t} \\
-\nabla \times \vec{B} &= \mu_0\vec{J} + \mu_0\varepsilon_0\frac{\partial\vec{E}}{\partial t}
-\end{aligned}
-$$
-
-[Learn more](https://sli.dev/features/latex)
-
----
-
-# Diagrams
-
-You can create diagrams / graphs from textual descriptions, directly in your Markdown.
-
-<div class="grid grid-cols-4 gap-5 pt-4 -mb-6">
-
-```mermaid {scale: 0.5, alt: 'A simple sequence diagram'}
-sequenceDiagram
-    Alice->John: Hello John, how are you?
-    Note over Alice,John: A typical interaction
-```
-
-```mermaid {theme: 'neutral', scale: 0.8}
-graph TD
-B[Text] --> C{Decision}
-C -->|One| D[Result 1]
-C -->|Two| E[Result 2]
-```
-
-```mermaid
-mindmap
-  root((mindmap))
-    Origins
-      Long history
-      ::icon(fa fa-book)
-      Popularisation
-        British popular psychology author Tony Buzan
-    Research
-      On effectiveness<br/>and features
-      On Automatic creation
-        Uses
-            Creative techniques
-            Strategic planning
-            Argument mapping
-    Tools
-      Pen and paper
-      Mermaid
-```
-
-```plantuml {scale: 0.7}
-@startuml
-
-package "Some Group" {
-  HTTP - [First Component]
-  [Another Component]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[repr(C)]
+pub struct Point {
+    x: i32,
+    y: i32,
 }
 
-node "Other Groups" {
-  FTP - [Second Component]
-  [First Component] --> FTP
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn parse_point(s: *const c_char, point: *mut Point) -> bool {
+    // ...
 }
-
-cloud {
-  [Example 1]
-}
-
-database "MySql" {
-  folder "This is my folder" {
-    [Folder 3]
-  }
-  frame "Foo" {
-    [Frame 4]
-  }
-}
-
-[Another Component] --> [Example 1]
-[Example 1] --> [Folder 3]
-[Folder 3] --> [Frame 4]
-
-@enduml
 ```
 
+::right::
+
+C-FFI-Bindings
+
+```c {*}{class:'!children:text-[8px]/1'}
+#ifndef POINT_H
+#define POINT_H
+
+// This file is autogenerated by cbindgen. Manual modifiation is futile.
+
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "some_dependency.h"
+
+typedef struct Point {
+  int32_t x;
+  int32_t y;
+} Point;
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+bool parse_point(const char *s, struct Point *point);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
+
+#endif  /* POINT_H */
+```
+
+<style>
+.two-cols-header {
+  column-gap: 2em; /* Adjust the gap size as needed */
+}
+</style>
+
+---
+
+# cbindgen: Syntaxfehler und Diagnosemeldungen
+
+* Syntaxfehler von cbindgen
+    * Cargo-Build-Skript `build.rs` wird vor Rust-Compiler ausgeführt
+    * Fehler brechen Rust-Build ab
+    * Das unterdrückt die zugehörigen Fehlermeldungen und erschwert deren Diagnose
+* Workaround: Syntaxfehler von cbindgen ignorieren
+    * Siehe Dokumentation: [_Quick Start_ >
+      _build.rs_](https://github.com/mozilla/cbindgen/blob/main/docs.md#buildrs)
+    * Rust-Compiler wird diese später ebenfalls melden
+    * Diagnosemeldungen des Rust-Compilers oder von `rust-analyzer` bleiben
+      erhalten
+
+<!--
+* Ist bei aktiver Arbeit an Rust-Code störend
+-->
+
+---
+
+# Fehlerbehandlung: Result
+
+* Rusts erster Weg ist einen Enum als Standard-Rückgabetyp für Operationen, die
+  fehlschlagen können
+    ```rust
+    enum Result<T, E> {
+        Ok(T),
+        Err(E),
+    }
+    ```
+* Vorteil in Rust-Code
+    * Explizite Behandlung der Fälle `Ok` und `Err` notwendig
+    * Behandlung kann nicht vergessen werden
+    * Fragezeichenoperator `?` zum komfortablen propagieren
+* Nachteil beim FFI
+    * Keine kompatible Darstellung
+    * Explizite Konvertierung notwendig
+
+<!--
+* Generische Typen benötingen zwingend Name-Mangling
+* Kein Name-Mangling für Funktionen, die von C aus aufrufbar sind
+-->
+
+---
+
+# Fehlerbehandlung: Result Konvertieren
+
+```rust {all|2|3-5|9-12|14|14-20|all}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn parse_point(s: *const c_char, point: *mut Point) -> bool {
+    if s.is_null() ||  point.is_null() {
+        return false;
+    }
+
+    // SAFETY: We expect `s` to point to a valid null-terminated C string and
+    // actually checked that it's not `NULL`.
+    let s = unsafe { CStr::from_ptr(s) };
+    let Ok(s) = s.to_str() else {
+        return false;
+    };
+
+    match Point::from_str(s) {
+        Ok(p) => {
+            unsafe { point.write(p) };
+            return true;
+        }
+        Err(_) => return false,
+    }
+}
+```
+
+---
+
+# Zeiger
+
+* Rust bietet dafür Raw-Pointer
+    * `*const` für konstante Daten
+    * `*mut` für veränderliche Daten
+* Zugriff über Referenz, wenn Pointer und Daten die [notwendigen
+  Anforderungen](https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion)
+  dafür erfüllen
+    ```rust
+    /// # Safety
+    ///
+    /// * `value` must be non-null, properly aligned and valid for reading and writing an `i32`.
+    /// * The memory `value` is pointing at must not be accessed concurrently to this function call.
+    ///
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn add_one(value: *mut i32) {
+        // SAFETY: The documentation states the requirements for `value` to the caller.
+        if let Some(reference) = unsafe { value.as_mut() } {
+            *reference = *reference + 1;
+        }
+    }
+    ```
+* Falls nicht, ist das Erzeugen einer Referenz undefiniertes Verhalten
+
+<!--
+* Korrekte Ausrichtung (Alignment)
+* Nicht `NULL`
+* Dereferenzierbar
+* Zeigt auf gültigen Wert des Datentyps
+* Muss die Regeln für Aliasing erfüllen
+-->
+
+---
+
+# Zeiger: Arrays
+
+<v-clicks depth="2">
+
+* Arrays aus C können in Rust-Slice gekapselt werden: `slice::from_raw_parts`
+
+```rust {all|4|5-7|9|10-17|all}
+use core::slice;
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bool {
+    if values.is_null() || sum.is_null() {
+        return false;
+    }
+
+    let values = unsafe { slice::from_raw_parts(values, len) };
+    let checked_sum: Option<i32> = values.iter()
+        .try_fold(0i32, |acc, x| acc.checked_add(*x));
+    match checked_sum {
+        Some(s) => {
+            unsafe { sum.write(s) };
+            true
+        }
+        None => false,
+    }
+}
+```
+
+</v-clicks>
+
+<!--
+* FIXME: Klick-Animatiorn berichtigen
+* TODO: Get line highlighting in code example to work when indented.
+-->
+
+---
+
+# Zeiger: Potentiell undefinierte Daten
+
+* Referenz würde das Lesen der Daten über Safe-Rust ermöglichen
+* Schreiben eines Wertes über entsprechende Methode des Raw-Pointers
+    ```rust
+    /// # Safety
+    ///
+    /// * `value` must be non-null, properly aligned and valid for writing an `i32`.
+    /// * The memory `value` is pointing at must not be accessed concurrently to this function call.
+    ///
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn init_value(value: *mut i32) {
+        // SAFETY: The documentation states the requirements for `value` to the caller.
+        unsafe { value.write(0) }
+    }
+    ```
+
+---
+
+# Zeiger: Ausgabeparameter
+
+* Ausgabedaten einer Funktion werden in C oft über Ausgabezeiger bereitgestellt
+* Raw-Pointer aus Referez?
+    * Werte in Rust müssen stets definiert sein
+    * Dummy-Initialisierung vor Übergabe erzeugt unnötige Laufzeitkosten
+* `MaybeUninit` kapselt uninitialisierte Daten
+    ```rust
+    use crate::sys::mbedtls::{mbedtls_ecdsa_context, mbedtls_ecdsa_init};
+    use core::mem::MaybeUninit;
+
+    fn main() {
+        let mut context: MaybeUninit<mbedtls_ecdsa_context> = MaybeUninit::uninit();
+
+        // SAFETY: We are passing in a valid pointer to uninitialized data.
+        unsafe { mbedtls_ecdsa_init(context.as_mut_ptr()) };
+
+        let mut context: mbedtls_ecdsa_context = context.assume_init();
+        // ...
+    }
+    ```
+
+---
+
+# FFI-Abstraktionen
+
+* FFI-Bindings sind der Anfang für Interoperabilität
+* Sind selten ernonomischer Rust-Code
+* Ergonomische und sichere Abstraktion für Rust-Anwendungscode dafür erstellen
+* Beispiel
+    ```rust
+    struct EcdsaContext {
+        inner: mbedtls_ecdsa_context,
+    }
+
+    impl EcdsaContext {
+        // ...
+
+        pub fn sign(&self, md: &Digest) -> Result<Signature, Error> { /* ... */ }
+
+        pub fn verify(&self, md: &Digest, sig: &Signature) -> Result<(), Error> { /* ... /* }
+    }
+    ```
+
+---
+layout: section
+---
+
+# Garnitur
+
+---
+
+# Dynamischer Speicher
+
+* Ist in Rusts `no_std`-Umgebung optional
+* Kann für bestimmten Code erforderlich sein
+* Kann über das Modul `alloc` genutzt werden
+    ```rust
+    let boxed_i32: Box<i32> = alloc::boxed::Box::new(Point{ x: 1, y: -1 });
+    ```
+* &#x26A0;&#xFE0F; Fehler bei Allokation fürht zu Panik!
+* APIs für wählbaren Allokator und Allokationen mit Fehlschlag
+    * Vorhanden
+    * Aber noch experimentell
+* Globalen Allokator explizit bereitstellen
+    * Implementierung von `core::alloc::GlobalAlloc`
+    * Instanz durch Annotation mit `#[global_allocator]` als globalen
+      Rust-Allokator setzen
+
+<!--
+* Gründe
+    * Algorithmus
+    * Mit C-ABI inkompatible Daten von C halten lassen (Handle/Zeiger)
+    * Abhängigkeiten
+    * ...
+* `core::alloc`
+    * Allokator
+    * Container
+    * ...
+* Globaler Allokator
+    * Vielfältiges Terrain
+    * Explizite Bereitstellung
+-->
+
+---
+
+# Dynamischer Speicher: libc-Allokator
+
+<v-clicks depth="3">
+
+* Oft steht bereits Speicherallokation über `malloc` und `free` in C-Codebasis
+  bereit
+* Crate `libc_alloc` bietet einen schlüsselfertigen Adapter
+    ```rust
+    extern crate alloc;
+    use libc_alloc::LibcAlloc;
+
+    #[global_allocator]
+    static ALLOCATOR: LibcAlloc = LibcAlloc;
+    ```
+* Zwingend notwendig, wenn in Rust allokierte Daten von C-Code mit `free`
+  freigegeben werden sollen
+    ``` rust
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn new_point(x: i32, y: i32) -> *mut Point {
+        let point = Box::new(Point{ x, y });
+        Box::leak(point) as *mut Point
+    }
+    ```
+    &#x0020;
+
+    ```c
+    const Point *point = new_point(1, -1);
+    free(point);
+    ```
+
+</v-clicks>
+
+<!--
+* TODO: Vertikalen Abstand zwischen zweit Codeblöcken aufräumen
+* Funktioniert nicht für Objekte, die `Drop` implementieren!
+-->
+
+---
+layout: two-cols-header
+---
+
+# Statisch allokierte Datenstrukturen
+
+* Dynamische Allokation ist in vielen Fällen nicht erforderlich
+* Overhead kann vermieden werden
+* Crate `heapless` stellt alternative Implementierungen bereit
+    * Ähnliche Funktionen
+    * Statische Kapazität
+* Beispiel
+
+::left::
+
+```rust
+extern crate alloc;
+use alloc::vec::Vec;
+
+let mut vec = Vec::new();
+vec.push(42);
+```
+
+::right::
+
+```rust
+use heapless::Vec;
+
+
+let mut vec = Vec::<i32, 3>::new();
+vec.push(42)?;
+```
+
+<style>
+.two-cols-header {
+  column-gap: 2em; /* Adjust the gap size as needed */
+}
+</style>
+
+---
+
+# Ökosystem
+
+* [Rust Embedded Working Group](https://github.com/rust-embedded)
+* Matrix Chat: [#rust-embedded:matrix.org](https://matrix.to/#/#rust-embedded:matrix.org)
+* Übersicht: [Awesome Embedded Rust](https://github.com/rust-embedded/awesome-embedded-rust)
+* Mein zentralen Crates
+    * Abstraktionen: `embedded-hal`, `heapless`
+    * Logging: `defmt`, `log`, `tracing`
+    * Debugging: `probe-rs`
+    * Treiber: ...
+* ...
+* Danke! &#x2764;
+
+<!--
+* Wo fange ich an? Wo höre ich auf?
+* Einladende Gemeinschaft
+* Großartiges Ökosystem
+* Unterstützung bei Vorbereitung des Vortrags
+-->
+
+---
+
+# Integration mit anderen Sprachen
+
+* Vortrag von Kris van Rens
+    * _Adopting Rust Means Talking to Rust – but how?_
+    * Heute 16:35 in diesem Saal
+* Für Integration mit weiteren Anwendungen
+    * Entwicklungswerkzeuge
+    * Tests
+    * Bedienoberflächen
+    * ...
+
+
+---
+
+# Zum Mitnehmen
+
+* Integration basiert auf C-ABI
+    * Kompatible Funktionsaufrufe
+    * Kompatible Datenstrukturen
+    * Rust-FFI
+    * Eine Rust-Bibliothek erstellen
+    * Rust-Bibliothek in Anwendung linken
+* Generatoren nuzten
+* Ökosystem erkunden und nutzen
+* Beginnen Sie mit kleinen Schritten
+
+
+---
+
+# Danke für Ihre Zeit!
+
+Die beste Zeit, eine Anwendung mit Rust zu modernisieren, war vor 10 Jahren.
+Die zweitbeste Zeit ist jetzt. \
+_Das Känguru_
+
+<div class="absolute bottom-10 left-0 right-0 p-2">
+    <p align="center">
+    <img width="250" src="/qr-repo.svg" />
+    https://github.com/sirhcel/ese-congress-2025
+    </p>
 </div>
 
-Learn more: [Mermaid Diagrams](https://sli.dev/features/mermaid) and [PlantUML Diagrams](https://sli.dev/features/plantuml)
+
+<!--
+* TODO: Layout _end_ anpassen und wieder nutzen?
+* Vorher/nachher für Code-Animationen in PDF exportieren
+-->
 
 ---
-foo: bar
-dragPos:
-  square: 691,32,167,_,-16
+
+# Empfehlungen
+
+* Übersichtsartikel von James Munns: [_Embedded Rust in Production
+  2025_](https://onevariable.com/blog/embedded-rust-production/)
+* Vortrag von Mark Russinovich: [_From Blue Screens to Orange Crabs:
+  Microsoft’s Rusty Revolution_](https://youtu.be/uDtMuS7BExE?t=17)
+* Blog-Artikel von Jeff Vander Stoep: [_Rust in Android: move fast and fix
+  things_](https://security.googleblog.com/2025/11/rust-in-android-move-fast-fix-things.html)
+* Vortrag von Florian Gilcher: [_Rust: Correctness at Large, Correctness in
+  Motion_](https://www.youtube.com/watch?v=DZkW5uozWcw)
+
+* Vortrag von Luca Palmieri: [_Rewrite, optimize, repeat: Our journey from porting a
+  triemap from C to Rust_](https://www.youtube.com/watch?v=vv9MKcllekU)
+* Blog-Artikel der Fish-Shell zur Migration zu Rust: [_Fish 4.0: The Fish Of
+  Theseus_](https://fishshell.com/blog/rustport/)
+
+* Blog-Artikel von Matthias Endler: [_Patterns for Defenfive Programming in
+  Rust_](https://corrode.dev/blog/defensive-programming/)
+* Das Rustonomicon zu [FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+
+---
+layout: section
 ---
 
-# Draggable Elements
+# Dessert
 
-Double-click on the draggable elements to edit their positions.
+---
 
-<br>
+# MaybeUninit: Partiell Initialisierte Arrays
 
-###### Directive Usage
+<v-clicks depth="2">
 
-```md
-<img v-drag="'square'" src="https://sli.dev/logo.png">
+* Übergabe eines uninitialisierten Puffers an C-Funktion
+    ```c
+    bool get_data(int32_t *data, size_t *len);
+    ```
+* Arbeit damit ist nicht trivial
+    * Arrays lassen sich nicht nicht dynamisch zur Laufzeit teilen
+    * `MaybeUninit::array_assert_init` wartet auf Stabilisierung
+    * Für `[MaybeUninit::<T>; N]` lässt sich `assume_init` nicht partiell
+      anwenden
+    * Iterieren über initialisierte Elemente und `MaybeUninit::assume_init_ref`
+      ist möglich
+    * ...
+    * &#x1F648;
+* `heapless::Vec` bietet komfortable Schnittstelle
+
+</v-clicks>
+
+---
+
+# MaybeUninit: Partiell Initialisierte Arrays
+
+```rust {all|4|7|8-10|12|14-17|18-20|all}
+use core::mem::MaybeUninit;
+use heapless::Vec;
+
+unsafe extern "C" { fn get_data(data: *mut i32, len: *mut usize) -> bool; }
+
+fn main() {
+    let mut data: Vec<i32, 32> = Vec::new();
+    let buf: &mut [MaybeUninit<i32>] = data.spare_capacity_mut();
+    let mut len = buf.len();
+
+    // SAFETY: `buf` is a non-emty slice of uninitialized data and `len` passed in is taken from that very same slice.
+    let good = unsafe { get_data(buf.as_mut_ptr() as *mut i32, &mut len as *mut usize) };
+
+    if good && len <= data.capacity() {
+        // SAFETY: We started with an empty `Vec` and therefor the legth of returned elements from `get_data` is the
+        // lenght of initialized elements in this `Vec`.
+        unsafe { data.set_len(len) }
+        for item in data.iter() {
+            // Process data ...
+        }
+    }
+}
 ```
-
-<br>
-
-###### Component Usage
-
-```md
-<v-drag text-3xl>
-  <div class="i-carbon:arrow-up" />
-  Use the `v-drag` component to have a draggable container!
-</v-drag>
-```
-
-<v-drag pos="663,206,261,_,-15">
-  <div text-center text-3xl border border-main rounded>
-    Double-click me!
-  </div>
-</v-drag>
-
-<img v-drag="'square'" src="https://sli.dev/logo.png">
-
-###### Draggable Arrow
-
-```md
-<v-drag-arrow two-way />
-```
-
-<v-drag-arrow pos="67,452,253,46" two-way op70 />
-
----
-src: ./pages/imported-slides.md
-hide: false
----
-
----
-
-# Monaco Editor
-
-Slidev provides built-in Monaco Editor support.
-
-Add `{monaco}` to the code block to turn it into an editor:
-
-```ts {monaco}
-import { ref } from 'vue'
-import { emptyArray } from './external'
-
-const arr = ref(emptyArray(10))
-```
-
-Use `{monaco-run}` to create an editor that can execute the code directly in the slide:
-
-```ts {monaco-run}
-import { version } from 'vue'
-import { emptyArray, sayHello } from './external'
-
-sayHello()
-console.log(`vue ${version}`)
-console.log(emptyArray<number>(10).reduce(fib => [...fib, fib.at(-1)! + fib.at(-2)!], [1, 1]))
-```
-
----
-layout: center
-class: text-center
----
-
-# Learn More
-
-[Documentation](https://sli.dev) · [GitHub](https://github.com/slidevjs/slidev) · [Showcases](https://sli.dev/resources/showcases)
-
-<PoweredBySlidev mt-10 />
