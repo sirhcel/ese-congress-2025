@@ -1196,20 +1196,29 @@ vec.push(42)?;
     * Bedienoberflächen
     * ...
 
-
 ---
 
 # Zum Mitnehmen
 
+<v-clicks depth="2">
+
 * Integration basiert auf C-ABI
     * Kompatible Funktionsaufrufe
     * Kompatible Datenstrukturen
-    * Rust-FFI
+    * Panic-Handler
+    * Gegebnenfalls Allokator
     * Eine Rust-Bibliothek erstellen
     * Rust-Bibliothek in Anwendung linken
-* Generatoren nuzten
+* Generatoren für FFI-Bindings nuzten
+* Trauen Sie sich, Fragen zu stellen
 * Ökosystem erkunden und nutzen
 * Beginnen Sie mit kleinen Schritten
+
+</v-clicks>
+
+<!--
+* Das hier gezeigte funktioniert 1:1 in reichhaltigerer Umgebung
+-->
 
 ---
 
