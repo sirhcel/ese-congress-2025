@@ -185,7 +185,7 @@ docs](https://sli.dev/guide/syntax.html#notes)
 * Rust heute
     * Gleiche Arbeitshypothesen
     * Echte Systemsprache
-    * Lässt sich auch auf Mikrocontrollern einetzen
+    * Lässt sich auch auf Mikrocontrollern einsetzen
 -->
 
 ---
@@ -232,7 +232,7 @@ background-size: contain
 # Anwendungsbeispiel
 
 * Energiezähler der Firma Bauer
-* Erweiterug einer bestehenden Bare-Metal-Firmware in C
+* Erweiterung einer bestehenden Bare-Metal-Firmware in C
     * Verarbeitung neuer Eingabedaten
     * Dynamisches Erzeugen von 2D-Codes für ein Zusatzdisplay
     * Authentifizierte Kommunikation zwischen Zähler und Zusatzdisplay
@@ -247,18 +247,36 @@ background-size: contain
 
 * Erfahrung mit bekannter Codebasis sammeln
 * Nicht alles auf einmal lösen müssen
+* Anwendung erlebbar halten
 * Bestehenden, bewährten Code behalten
-    * Neue Fehler stammen überwiegend aus neuem Code
-    * Zertifizierung für bestehenden Code erhalten
+    * Neu entdeckte Fehler stammen überwiegend aus neuem Code
+    * Zertifizierung erhalten
+    * Investition erhalten
 * Externe Komponenten weiter nutzen
     * Adapter für Krypto-Beschleuniger
     * ...
 * "Schwache Flanken" verbessern
 
 </v-clicks>
+* Kunden würdigen neue Funktionalität in der Regel höher als einen Rewrite
 
 <!--
+* Erlebbar für Tests, Bewertung und Diskussion
+* Google: Neue Funktionalität in Android wird in Rust erstellt
+    * Hinweis auf Blog-Artikel im Anhang
 * Auch für Zertifizierer ist Rust oft Neuland
+* Espressif
+    * Zuerst Rust-Abstraktionen für ESP-IDF
+    * Später reinen Rust-Support
+    * Funktionsumfang des reinen Rust-Supports noch deutlich hinter
+      ESP-IDF-basiertem
+* Mainmatter und Redis
+    * Rewrite "im laufenden Betrieb"
+    * Parallel Schulung, Coaching und Erfahrungssammeln der Redis-Entwickler
+    * Stückweise Transformation
+    * Hinweis auf Votrag von Luca Palmieri
+* Krypto-Beschleuniger
+    * Expertise ist oft nicht vorhanden
 -->
 
 ---
@@ -277,13 +295,17 @@ layout: section
     </p>
 </div>
 
+<!--
+* Hinweis: Übertragbar auf Standardumgebungen
+-->
+
 ---
 
 # Grundlage: C-ABI
 
 <v-clicks depth="2">
 
-* Application Binary Interface der Sprache C
+* Application-Binary-Interface der Sprache C
     * Konventionen für Funktionsaufrufe
     * Speicherlayout
     * Praktisch für alle Targets verfügbar
@@ -372,7 +394,7 @@ fn main() {
 * Aufruf muss über `unsafe` erfolgen
     * Rust-Compiler kann `square` nicht prüfen
     * Nutzer muss prüfen, dass `square` kein undefiniertes Verhalten enthält
-    * Mit `unsafe` erkläkt der Nutzer dies gegenüber dem Rust-Compiler
+    * Mit `unsafe` erklärt der Nutzer dies gegenüber dem Rust-Compiler
     * Zustimmung ist explizit und leicht auffindbar
 
 </v-clicks>
@@ -492,7 +514,7 @@ pub struct Point {
 
 <v-clicks>
 
-* Grunlage: C-ABI
+* Grundlage: C-ABI
 * Kompatible Rust-Funktionprototypen
     ```rust
     unsafe extern "C" { square(value: c_int) -> c_int; }
@@ -511,7 +533,7 @@ pub struct Point {
     #[repr(C)]
     pub struct Point { x: i32, y: i32 }
     ```
-* Allen Rust-Code zu einer (statischen) Funktion übersetzen
+* Gesamten Rust-Code zu einer (statischen) Bibliothek übersetzen 
 * C- und Rust-Code zu einer Anwendung linken &#x1f389;
 
 </v-clicks>
@@ -590,7 +612,7 @@ layout: section
 
 # bindgen: Nutzung als Befehl
 
-* Befehl als Wrapper um Bibliohek
+* Befehl als Wrapper um Bibliothek
 * Für statische Generierung
 * Für Integration in Nicht-Rust-Builds
 * Beispiel
@@ -727,7 +749,7 @@ unsafe extern "C" {
 <v-clicks depth="2">
 
 * Übersetzt nicht alle Sprachkonstrukte
-    * Zum Beispiel werden Defines mit Typumwandlung noch nicht unterstützt
+    * Zum Beispiel werden Definitionen mit Typumwandlung noch nicht unterstützt
         ```c
         typedef uint8_t flag_type;
         #define FLAG_TYPE_C(x) ((flag_type)(x))
@@ -887,7 +909,7 @@ bool parse_point(const char *s, struct Point *point);
     * Explizite Konvertierung notwendig
 
 <!--
-* Generische Typen benötingen zwingend Name-Mangling
+* Generische Typen benötigen zwingend Name-Mangling
 * Kein Name-Mangling für Funktionen, die von C aus aufrufbar sind
 -->
 
@@ -1014,7 +1036,7 @@ unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bo
 # Zeiger: Ausgabeparameter
 
 * Ausgabedaten einer Funktion werden in C oft über Ausgabezeiger bereitgestellt
-* Raw-Pointer aus Referez?
+* Raw-Pointer aus Referenz?
     * Werte in Rust müssen stets definiert sein
     * Dummy-Initialisierung vor Übergabe erzeugt unnötige Laufzeitkosten
 * `MaybeUninit` kapselt uninitialisierte Daten
@@ -1038,7 +1060,7 @@ unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bo
 # FFI-Abstraktionen
 
 * FFI-Bindings sind der Anfang für Interoperabilität
-* Sind selten ernonomischer Rust-Code
+* Sind selten ergonomischer Rust-Code
 * Ergonomische und sichere Abstraktion für Rust-Anwendungscode dafür erstellen
 * Beispiel
     ```rust
@@ -1071,7 +1093,7 @@ layout: section
     ```rust
     let boxed_i32: Box<i32> = alloc::boxed::Box::new(Point{ x: 1, y: -1 });
     ```
-* &#x26A0;&#xFE0F; Fehler bei Allokation fürht zu Panik!
+* &#x26A0;&#xFE0F; Fehler bei Allokation führt zu Panik!
 * APIs für wählbaren Allokator und Allokationen mit Fehlschlag
     * Vorhanden
     * Aber noch experimentell
@@ -1093,6 +1115,10 @@ layout: section
 * Globaler Allokator
     * Vielfältiges Terrain
     * Explizite Bereitstellung
+* Wege gehen
+    * Mehr Nutzung
+    * Mehr Nachfragen
+    * Stabilisierung beschleunigen
 -->
 
 ---
@@ -1223,7 +1249,6 @@ vec.push(42)?;
 * Ökosystem erkunden und nutzen
 * Beginnen Sie mit kleinen Schritten
 
-
 ---
 
 # Danke für Ihre Zeit!
@@ -1238,7 +1263,6 @@ _Das Känguru_
     https://github.com/sirhcel/ese-congress-2025
     </p>
 </div>
-
 
 <!--
 * TODO: Layout _end_ anpassen und wieder nutzen?
@@ -1263,7 +1287,7 @@ _Das Känguru_
 * Blog-Artikel der Fish-Shell zur Migration zu Rust: [_Fish 4.0: The Fish Of
   Theseus_](https://fishshell.com/blog/rustport/)
 
-* Blog-Artikel von Matthias Endler: [_Patterns for Defenfive Programming in
+* Blog-Artikel von Matthias Endler: [_Patterns for Defensive Programming in
   Rust_](https://corrode.dev/blog/defensive-programming/)
 * Das Rustonomicon zu [FFI](https://doc.rust-lang.org/nomicon/ffi.html)
 
