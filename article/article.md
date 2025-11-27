@@ -193,7 +193,7 @@ Es lohnt sich. In mehrfacher Hinsicht.
 
 ## Autor
 
-![[portrait-github.jpg]]
+![Portrait](portrait-github.jpg)
 
 Christian Meusel ist Diplom-Informatiker und entwickelt Eingebettete Systeme mit Leidenschaft. Er hat in vielen Rollen und Gewerken gearbeitet: Von Schwarzmagie für EMV-Zertifizierungen, Hardwareinbetriebnahmen, Software vom Mikrocontroller bis zum Userspace, Sicherheitsaudits und Produktzertifizierungen. Seit 2016 hilft er als Freiberufler seinen Kunden, aus Ideen Produkte werden zu lassen und diese im Feld zu betreuen. Rust spielt dabei eine immer größere Rolle.
 
