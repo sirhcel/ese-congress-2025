@@ -28,7 +28,7 @@ fonts:
     mono: JetBrains Mono
 ---
 
-Embedded Software Engineering Kongress 2025
+Rust-Augsburg-Meetup 27.11.2025
 
 # Oxidieren Schritt für Schritt
 
@@ -546,8 +546,6 @@ layout: section
     * `cxx` für idiomatischere C++&#x200b;-Schnittstellen
     * `cxx-qt` für spezialisierte Integration mit Qt
     * ...
-    * Vortrag von Kris van Rens: _Adopting Rust Means Talking to Rust – but
-      how?_, heute 16:35 in diesem Saal
 
 <!--
 * Beispiel Komplexität: mbedTLS
@@ -1187,9 +1185,11 @@ vec.push(42)?;
 
 # Integration mit anderen Sprachen
 
-* Vortrag von Kris van Rens
-    * _Adopting Rust Means Talking to Rust – but how?_
-    * Heute 16:35 in diesem Saal
+* Integrationen für viele weitere Sprachen verfügbar
+    * PyO3 für Python
+    * Diplomat für C, C++, Dart, Javascript/Typescript, Kotlin, Python
+    * Rust JNI für Java
+    * ...
 * Für Integration mit weiteren Anwendungen
     * Entwicklungswerkzeuge
     * Tests
