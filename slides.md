@@ -243,8 +243,6 @@ background-size: contain
 
 # Warum Erweitern oder Modernisieren?
 
-<v-clicks depth="2">
-
 * Erfahrung mit bekannter Codebasis sammeln
 * Nicht alles auf einmal lösen müssen
 * Anwendung erlebbar halten
@@ -256,8 +254,6 @@ background-size: contain
     * Adapter für Krypto-Beschleuniger
     * ...
 * "Schwache Flanken" verbessern
-
-</v-clicks>
 * Kunden würdigen neue Funktionalität in der Regel höher als einen Rewrite
 
 <!--
@@ -303,8 +299,6 @@ layout: section
 
 # Grundlage: C-ABI
 
-<v-clicks depth="2">
-
 * Application-Binary-Interface der Sprache C
     * Konventionen für Funktionsaufrufe
     * Speicherlayout
@@ -314,8 +308,6 @@ layout: section
     * Erzeugt kompatiblen Code für Aufrufe aus und Einsprungpunkte in Rust
     * Erzeugt kompatible Speicherdarstellungen
     * Einschränkung bei nutzbaren Sprachmerkmalen
-
-</v-clicks>
 
 <!--
 * Speicherlayout
@@ -344,13 +336,13 @@ pub extern "C" fn add(left: c_int, right: c_int) -> c_int {
 }
 ```
 ````
-<v-clicks>
+<v-click>
 
 * Modul `core::ffi` stellt plattformspezifische C-Datentypen bereit
 * `#[unsafe(no_mangle)]` deaktiviert Name-Mangling des Rust-Compilers
 * `extern "C"` erzeugt zum C-ABI kompatiblen Prolog und Epilog
 
-</v-clicks>
+</v-click>
 
 <!--
 * Name Mangling
@@ -387,7 +379,7 @@ fn main() {
 ```
 ````
 
-<v-clicks depth="2">
+<v-click>
 
 * Deklaration des Funktionsprototypen als `extern "C"`
 * Compiler erzeugt zum C-ABI kompatiblen Code für einen Aufruf
@@ -397,7 +389,7 @@ fn main() {
     * Mit `unsafe` erklärt der Nutzer dies gegenüber dem Rust-Compiler
     * Zustimmung ist explizit und leicht auffindbar
 
-</v-clicks>
+</v-click>
 
 ---
 
@@ -421,7 +413,7 @@ pub struct Point {
 }
 ```
 ````
-<v-clicks depth="2">
+<v-click>
 
 * `#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]` erzeugt automatische
   Implementierungen für Rust-Standard-Traits
@@ -431,13 +423,11 @@ pub struct Point {
     * Schlüssel für Hash-Map
 * `#[repr(C)]` erzeugt zum C-ABI kompatibles Layout
 
-</v-clicks>
+</v-click>
 
 ---
 
 # Panic-Handler
-
-<v-clicks>
 
 * Zwei Mechanismen zur Signalisierung von Fehlern
     * Im Datenfluss: `Result<T, E>`
@@ -454,8 +444,6 @@ pub struct Point {
         cortex_m::asm::udf();
     }
     ```
-
-</v-clicks>
 
 <!--
 * Später mehr zum Result
@@ -481,8 +469,6 @@ pub struct Point {
 
 # Integration: Als Bibliothek
 
-<v-clicks depth="2">
-
 * C- und Rust-Code werden separat übersetzt
 * Gesamten Rust-Code zu einer Bibliothek übersetzen
     * Rust-Runtime-Code würde sonst Namenskonflikte erzeugen
@@ -497,9 +483,6 @@ pub struct Point {
     $ gcc -o firmware.elf librusty.a ...
     ```
 * Geschafft! &#x1f389;
-
-
-</v-clicks>
 
 <!--
 * Für Mikrocontroller statische Bibliothek
@@ -552,8 +535,6 @@ layout: section
 
 # FFI-Bindings: Automatisches Erzeugen
 
-<v-clicks depth="2">
-
 * Manuelles Erzeugen ist fehleranfällig
     * Anpassung bei Änderungen
     * Komplexität der Schnittstelle
@@ -568,8 +549,6 @@ layout: section
     * Vortrag von Kris van Rens: _Adopting Rust Means Talking to Rust – but
       how?_, heute 16:35 in diesem Saal
 
-</v-clicks>
-
 <!--
 * Beispiel Komplexität: mbedTLS
 * Werkzeuge haben Grenzen
@@ -580,8 +559,6 @@ layout: section
 
 # bindgen
 
-<v-clicks depth="2">
-
 * Erzeugt Rust-Bindings für C/C++&#x200b;-Code
     * Aus Header-Datei
     * Für ein bestimmtes Build-Target
@@ -591,8 +568,6 @@ layout: section
 * Generierung
     * Statisch und generierte Bindings dem Projekt hinzufügen
     * Dynamisch im Übersetzungsvorgang
-
-</v-clicks>
 
 <!--
 * Sysroot:
@@ -746,8 +721,6 @@ unsafe extern "C" {
 
 # bindgen: Limitierungen
 
-<v-clicks depth="2">
-
 * Übersetzt nicht alle Sprachkonstrukte
     * Zum Beispiel werden Definitionen mit Typumwandlung noch nicht unterstützt
         ```c
@@ -765,8 +738,6 @@ unsafe extern "C" {
 * bindgen nutzt LLVM - nicht den C-Compiler für das Zielsystem
     * Compiler kann zum Beispiel die Größe eines Enums frei wählen
     * Durch zusätzliche Tests absichern
-
-</v-clicks>
 
 <!--
 * Bei Problemen können einzelne Elemente von Generierung ausgenommen werden
@@ -979,8 +950,6 @@ pub unsafe extern "C" fn parse_point(s: *const c_char, point: *mut Point) -> boo
 
 # Zeiger: Arrays
 
-<v-clicks depth="2">
-
 * Arrays aus C können in Rust-Slice gekapselt werden: `slice::from_raw_parts`
 
 ```rust {all|4|5-7|9|10-17|all}
@@ -1005,10 +974,7 @@ unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bo
 }
 ```
 
-</v-clicks>
-
 <!--
-* FIXME: Klick-Animatiorn berichtigen
 * TODO: Get line highlighting in code example to work when indented.
 -->
 
@@ -1040,20 +1006,20 @@ unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bo
     * Werte in Rust müssen stets definiert sein
     * Dummy-Initialisierung vor Übergabe erzeugt unnötige Laufzeitkosten
 * `MaybeUninit` kapselt uninitialisierte Daten
-    ```rust
-    use crate::sys::mbedtls::{mbedtls_ecdsa_context, mbedtls_ecdsa_init};
-    use core::mem::MaybeUninit;
+```rust {all|5|8-8|10|all}
+use crate::sys::mbedtls::{mbedtls_ecdsa_context, mbedtls_ecdsa_init};
+use core::mem::MaybeUninit;
 
-    fn main() {
-        let mut context: MaybeUninit<mbedtls_ecdsa_context> = MaybeUninit::uninit();
+fn main() {
+    let mut context: MaybeUninit<mbedtls_ecdsa_context> = MaybeUninit::uninit();
 
-        // SAFETY: We are passing in a valid pointer to uninitialized data.
-        unsafe { mbedtls_ecdsa_init(context.as_mut_ptr()) };
+    // SAFETY: We are passing in a valid pointer to uninitialized data.
+    unsafe { mbedtls_ecdsa_init(context.as_mut_ptr()) };
 
-        let mut context: mbedtls_ecdsa_context = context.assume_init();
-        // ...
-    }
-    ```
+    let mut context: mbedtls_ecdsa_context = context.assume_init();
+    // ...
+}
+```
 
 ---
 
@@ -1125,8 +1091,6 @@ layout: section
 
 # Dynamischer Speicher: libc-Allokator
 
-<v-clicks depth="3">
-
 * Oft steht bereits Speicherallokation über `malloc` und `free` in C-Codebasis
   bereit
 * Crate `libc_alloc` bietet einen schlüsselfertigen Adapter
@@ -1152,8 +1116,6 @@ layout: section
     const Point *point = new_point(1, -1);
     free(point);
     ```
-
-</v-clicks>
 
 <!--
 * TODO: Vertikalen Abstand zwischen zweit Codeblöcken aufräumen
