@@ -509,7 +509,7 @@ pub struct Point {
     ```
 * Passende C-Funktionsprototypen
     ```c
-    int add(const int left, const int right) -> int;
+    int add(const int left, const int right);
     ```
 * Kompatible Datentypen
     ```rust
