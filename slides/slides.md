@@ -1222,26 +1222,6 @@ vec.push(42)?;
 
 ---
 
-# Danke für Ihre Zeit!
-
-Die beste Zeit, eine Anwendung mit Rust zu modernisieren, war vor 10 Jahren.
-Die zweitbeste Zeit ist jetzt. \
-_Das Känguru_
-
-<div class="absolute bottom-10 left-0 right-0 p-2">
-    <p align="center">
-    <img width="250" src="/qr-repo.svg" />
-    https://github.com/sirhcel/ese-congress-2025
-    </p>
-</div>
-
-<!--
-* TODO: Layout _end_ anpassen und wieder nutzen?
-* Vorher/nachher für Code-Animationen in PDF exportieren
--->
-
----
-
 # Empfehlungen
 
 * Übersichtsartikel von James Munns: [_Embedded Rust in Production
@@ -1261,6 +1241,26 @@ _Das Känguru_
 * Blog-Artikel von Matthias Endler: [_Patterns for Defensive Programming in
   Rust_](https://corrode.dev/blog/defensive-programming/)
 * Das Rustonomicon zu [FFI](https://doc.rust-lang.org/nomicon/ffi.html)
+
+---
+
+# Danke für Ihre Zeit!
+
+Die beste Zeit, eine Anwendung mit Rust zu modernisieren, war vor 10 Jahren.
+Die zweitbeste Zeit ist jetzt. \
+_Das Känguru_
+
+<div class="absolute bottom-10 left-0 right-0 p-2">
+    <p align="center">
+    <img width="250" src="/qr-repo.svg" />
+    https://github.com/sirhcel/ese-congress-2025
+    </p>
+</div>
+
+<!--
+* TODO: Layout _end_ anpassen und wieder nutzen?
+* Vorher/nachher für Code-Animationen in PDF exportieren
+-->
 
 ---
 layout: section
