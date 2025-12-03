@@ -415,13 +415,8 @@ pub struct Point {
 ````
 <v-click>
 
-* `#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]` erzeugt automatische
-  Implementierungen für Rust-Standard-Traits
-    * Duplizieren von Werten
-    * Vergleich von Werten mittels `==`
-    * Darstellung für Debug-Ausgaben `Point { x: 1, y: 2 }`
-    * Schlüssel für Hash-Map
 * `#[repr(C)]` erzeugt zum C-ABI kompatibles Layout
+* In Rust weiterhin ein normaler Datentyp
 
 </v-click>
 
@@ -495,27 +490,27 @@ pub struct Point {
 
 # Zwischenbilanz
 
-<v-clicks>
+<v-clicks depth="2">
 
 * Grundlage: C-ABI
-* Kompatible Rust-Funktionprototypen
-    ```rust
-    unsafe extern "C" { square(value: c_int) -> c_int; }
-    ```
-* Aufrufkompatible Rust-Funktionen
-    ```rust
-    #[unsafe(no_mangle)]
-    extern "C" fn add(left: c_int, right: c_int) -> c_int
-    ```
-* Passende C-Funktionsprototypen
-    ```c
-    int add(const int left, const int right);
-    ```
-* Kompatible Datentypen
-    ```rust
-    #[repr(C)]
-    pub struct Point { x: i32, y: i32 }
-    ```
+    * Aufrufkompatible Rust-Funktionen
+        ```rust
+        #[unsafe(no_mangle)]
+        extern "C" fn add(left: c_int, right: c_int) -> c_int
+        ```
+    * Passende C-Funktionsprototypen
+        ```c
+        int add(const int left, const int right);
+        ```
+    * Prototypen für C-Funktionen in Rust
+        ```rust
+        unsafe extern "C" { square(value: c_int) -> c_int; }
+        ```
+    * Kompatible Datentypen
+        ```rust
+        #[repr(C)]
+        pub struct Point { x: i32, y: i32 }
+        ```
 * Gesamten Rust-Code zu einer (statischen) Bibliothek übersetzen 
 * C- und Rust-Code zu einer Anwendung linken &#x1f389;
 
@@ -601,9 +596,6 @@ layout: section
         -I mbedtls/include \
         > src/mbedtls.rs
     ```
-* Argumente
-    * Vor `--` für bindgen selbst
-    * Nach `--` für LLVM
 
 ---
 
@@ -922,20 +914,21 @@ pub unsafe extern "C" fn parse_point(s: *const c_char, point: *mut Point) -> boo
 * Zugriff über Referenz, wenn Pointer und Daten die [notwendigen
   Anforderungen](https://doc.rust-lang.org/core/ptr/index.html#pointer-to-reference-conversion)
   dafür erfüllen
-    ```rust
-    /// # Safety
-    ///
-    /// * `value` must be non-null, properly aligned and valid for reading and writing an `i32`.
-    /// * The memory `value` is pointing at must not be accessed concurrently to this function call.
-    ///
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn add_one(value: *mut i32) {
-        // SAFETY: The documentation states the requirements for `value` to the caller.
-        if let Some(reference) = unsafe { value.as_mut() } {
-            *reference = *reference + 1;
-        }
+```rust {all|7|9|10|all}
+/// # Safety
+///
+/// * `value` must be non-null, properly aligned and valid for reading and writing an `i32`.
+/// * The memory `value` is pointing at must not be accessed concurrently to this function call.
+///
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn add_one(value: *mut i32) {
+    // SAFETY: The documentation states the requirements for `value` to the caller.
+    if let Some(reference) = unsafe { value.as_mut() } {
+        *reference += 1;
     }
-    ```
+}
+```
+
 * Falls nicht, ist das Erzeugen einer Referenz undefiniertes Verhalten
 
 <!--
@@ -948,11 +941,30 @@ pub unsafe extern "C" fn parse_point(s: *const c_char, point: *mut Point) -> boo
 
 ---
 
+# Zeiger: Potentiell undefinierte Daten
+
+* Referenz würde das Lesen der Daten über Safe-Rust ermöglichen
+* Schreiben eines Wertes über entsprechende Methode des Raw-Pointers
+```rust {all|7|9|all}
+/// # Safety
+///
+/// * `value` must be non-null, properly aligned and valid for writing an `i32`.
+/// * The memory `value` is pointing at must not be accessed concurrently to this function call.
+///
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn init_value(value: *mut i32) {
+    // SAFETY: The documentation states the requirements for `value` to the caller.
+    unsafe { value.write(0) }
+}
+```
+
+---
+
 # Zeiger: Arrays
 
 * Arrays aus C können in Rust-Slice gekapselt werden: `slice::from_raw_parts`
 
-```rust {all|4|5-7|9|10-17|all}
+```rust {all|4|5-7|9|10-11|12-17|all}
 use core::slice;
 
 #[unsafe(no_mangle)]
@@ -977,25 +989,6 @@ unsafe extern "C" fn sum_up(values: *const i32, len: usize, sum: *mut i32) -> bo
 <!--
 * TODO: Get line highlighting in code example to work when indented.
 -->
-
----
-
-# Zeiger: Potentiell undefinierte Daten
-
-* Referenz würde das Lesen der Daten über Safe-Rust ermöglichen
-* Schreiben eines Wertes über entsprechende Methode des Raw-Pointers
-    ```rust
-    /// # Safety
-    ///
-    /// * `value` must be non-null, properly aligned and valid for writing an `i32`.
-    /// * The memory `value` is pointing at must not be accessed concurrently to this function call.
-    ///
-    #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn init_value(value: *mut i32) {
-        // SAFETY: The documentation states the requirements for `value` to the caller.
-        unsafe { value.write(0) }
-    }
-    ```
 
 ---
 
@@ -1029,19 +1022,19 @@ fn main() {
 * Sind selten ergonomischer Rust-Code
 * Ergonomische und sichere Abstraktion für Rust-Anwendungscode dafür erstellen
 * Beispiel
-    ```rust
-    struct EcdsaContext {
-        inner: mbedtls_ecdsa_context,
-    }
+```rust {all|1-3|5-11|all}
+struct EcdsaContext {
+    inner: mbedtls_ecdsa_context,
+}
 
-    impl EcdsaContext {
-        // ...
+impl EcdsaContext {
+    // ...
 
-        pub fn sign(&self, md: &Digest) -> Result<Signature, Error> { /* ... */ }
+    pub fn sign(&self, md: &Digest) -> Result<Signature, Error> { /* ... */ }
 
-        pub fn verify(&self, md: &Digest, sig: &Signature) -> Result<(), Error> { /* ... /* }
-    }
-    ```
+    pub fn verify(&self, md: &Digest, sig: &Signature) -> Result<(), Error> { /* ... /* }
+}
+```
 
 ---
 layout: section
@@ -1055,6 +1048,10 @@ layout: section
 
 * Ist in Rusts `no_std`-Umgebung optional
 * Kann für bestimmten Code erforderlich sein
+* Globalen Allokator explizit bereitstellen
+    * Implementierung von `core::alloc::GlobalAlloc`
+    * Instanz durch Annotation mit `#[global_allocator]` als globalen
+      Rust-Allokator setzen
 * Kann über das Modul `alloc` genutzt werden
     ```rust
     let boxed_i32: Box<i32> = alloc::boxed::Box::new(Point{ x: 1, y: -1 });
@@ -1063,10 +1060,6 @@ layout: section
 * APIs für wählbaren Allokator und Allokationen mit Fehlschlag
     * Vorhanden
     * Aber noch experimentell
-* Globalen Allokator explizit bereitstellen
-    * Implementierung von `core::alloc::GlobalAlloc`
-    * Instanz durch Annotation mit `#[global_allocator]` als globalen
-      Rust-Allokator setzen
 
 <!--
 * Gründe
@@ -1093,14 +1086,6 @@ layout: section
 
 * Oft steht bereits Speicherallokation über `malloc` und `free` in C-Codebasis
   bereit
-* Crate `libc_alloc` bietet einen schlüsselfertigen Adapter
-    ```rust
-    extern crate alloc;
-    use libc_alloc::LibcAlloc;
-
-    #[global_allocator]
-    static ALLOCATOR: LibcAlloc = LibcAlloc;
-    ```
 * Zwingend notwendig, wenn in Rust allokierte Daten von C-Code mit `free`
   freigegeben werden sollen
     ``` rust
@@ -1115,6 +1100,13 @@ layout: section
     ```c
     const Point *point = new_point(1, -1);
     free(point);
+    ```
+* Crate `libc_alloc` bietet einen schlüsselfertigen Adapter
+    ```rust
+    use libc_alloc::LibcAlloc;
+
+    #[global_allocator]
+    static ALLOCATOR: LibcAlloc = LibcAlloc;
     ```
 
 <!--
@@ -1187,14 +1179,14 @@ vec.push(42)?;
 
 # Integration mit anderen Sprachen
 
-* Vortrag von Kris van Rens
-    * _Adopting Rust Means Talking to Rust – but how?_
-    * Heute 16:35 in diesem Saal
 * Für Integration mit weiteren Anwendungen
     * Entwicklungswerkzeuge
     * Tests
     * Bedienoberflächen
     * ...
+* Vortrag von Kris van Rens
+    * _Adopting Rust Means Talking to Rust – but how?_
+    * Heute 16:35 in diesem Saal
 
 ---
 
@@ -1210,8 +1202,8 @@ vec.push(42)?;
     * Eine Rust-Bibliothek erstellen
     * Rust-Bibliothek in Anwendung linken
 * Generatoren für FFI-Bindings nuzten
-* Trauen Sie sich, Fragen zu stellen
 * Ökosystem erkunden und nutzen
+* Trauen Sie sich, Fragen zu stellen
 * Beginnen Sie mit kleinen Schritten
 
 </v-clicks>
