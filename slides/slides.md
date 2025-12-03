@@ -1238,9 +1238,14 @@ vec.push(42)?;
 
 # Danke für Ihre Zeit!
 
-Die beste Zeit, eine Anwendung mit Rust zu modernisieren, war vor 10 Jahren.
-Die zweitbeste Zeit ist jetzt. \
-_Das Känguru_
+<!-- TODO: Layout für Zitat anpassen und Workaround entfernen -->
+<p>&nbsp;</p>
+    <p>
+    Die beste Zeit, eine Anwendung mit Rust zu modernisieren, war vor 10 Jahren.
+    Die zweitbeste Zeit ist jetzt.
+    <br />
+    <i>Das Känguru</i>
+</p>
 
 <div class="absolute bottom-10 left-0 right-0 p-2">
     <p align="center">
