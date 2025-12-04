@@ -1054,7 +1054,8 @@ layout: section
       Rust-Allokator setzen
 * Kann über das Modul `alloc` genutzt werden
     ```rust
-    let boxed_i32: Box<i32> = alloc::boxed::Box::new(Point{ x: 1, y: -1 });
+    use alloc::boxed::Box;
+    let boxed_point: Box<Point> = Box::new(Point{ x: 1, y: -1 });
     ```
 * &#x26A0;&#xFE0F; Fehler bei Allokation führt zu Panik!
 * APIs für wählbaren Allokator und Allokationen mit Fehlschlag
