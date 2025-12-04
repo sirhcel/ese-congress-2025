@@ -224,22 +224,6 @@ pub fn fetch_features(
 -->
 
 ---
-layout: image-right
-image: bsm-ws36a-ed.png
-background-size: contain
----
-
-# Anwendungsbeispiel
-
-* Energiezähler der Firma Bauer
-* Erweiterung einer bestehenden Bare-Metal-Firmware in C
-    * Verarbeitung neuer Eingabedaten
-    * Dynamisches Erzeugen von 2D-Codes für ein Zusatzdisplay
-    * Authentifizierte Kommunikation zwischen Zähler und Zusatzdisplay
-* Projekt ist im Feldtest
-* Zertifizierung läuft
-
----
 
 # Warum Erweitern oder Modernisieren?
 
@@ -274,6 +258,22 @@ background-size: contain
 * Krypto-Beschleuniger
     * Expertise ist oft nicht vorhanden
 -->
+
+---
+layout: image-right
+image: bsm-ws36a-ed.png
+background-size: contain
+---
+
+# Anwendungsbeispiel
+
+* Energiezähler der Firma Bauer
+* Erweiterung einer bestehenden Bare-Metal-Firmware in C
+    * Verarbeitung neuer Eingabedaten
+    * Dynamisches Erzeugen von 2D-Codes für ein Zusatzdisplay
+    * Authentifizierte Kommunikation zwischen Zähler und Zusatzdisplay
+* Projekt ist im Feldtest
+* Zertifizierung läuft
 
 ---
 layout: section
