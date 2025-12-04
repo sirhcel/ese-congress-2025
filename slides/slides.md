@@ -1009,7 +1009,7 @@ fn main() {
     // SAFETY: We are passing in a valid pointer to uninitialized data.
     unsafe { mbedtls_ecdsa_init(context.as_mut_ptr()) };
 
-    let mut context: mbedtls_ecdsa_context = context.assume_init();
+    let mut context: mbedtls_ecdsa_context = unsafe { context.assume_init() };
     // ...
 }
 ```
