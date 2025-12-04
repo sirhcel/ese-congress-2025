@@ -1160,11 +1160,13 @@ vec.push(42)?;
 * [Rust Embedded Working Group](https://github.com/rust-embedded)
 * Matrix Chat: [#rust-embedded:matrix.org](https://matrix.to/#/#rust-embedded:matrix.org)
 * Übersicht: [Awesome Embedded Rust](https://github.com/rust-embedded/awesome-embedded-rust)
-* Mein zentralen Crates
+* Mein zentralen Crates und Werkzeuge
     * Abstraktionen: `embedded-hal`, `heapless`
     * Logging: `defmt`, `log`, `tracing`
-    * Debugging: `probe-rs`
+    * Datenaustausch: `serde`, `serde-json`, `postcard-rpc`
     * Treiber: ...
+    * Build: `corrosion`
+    * Debugging: `probe-rs`
 * ...
 * Danke! &#x2764;
 
